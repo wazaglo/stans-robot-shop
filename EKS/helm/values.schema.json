@@ -4,13 +4,20 @@
   "description": "Validation for the robot-shop chart. Exists so that a typo in a --set flag, or a value of the wrong shape, fails at `helm install` time instead of producing a manifest that is subtly wrong. Requires Helm 3.5+.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["image", "web", "dataTier"],
+  "required": [
+    "image",
+    "web",
+    "dataTier"
+  ],
   "properties": {
     "image": {
       "type": "object",
       "description": "Image coordinates for the ten services built from this repo. Combined as {{ .Values.image.repo }}/rs-<service>:{{ .Values.image.version }}.",
       "additionalProperties": false,
-      "required": ["repo", "version"],
+      "required": [
+        "repo",
+        "version"
+      ],
       "properties": {
         "repo": {
           "type": "string",
@@ -24,7 +31,11 @@
         },
         "pullPolicy": {
           "type": "string",
-          "enum": ["Always", "IfNotPresent", "Never"],
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
           "default": "IfNotPresent"
         }
       }
@@ -34,8 +45,16 @@
       "description": "Instana end-user monitoring. Off unless key is set, and the committed images do not contain the tracing libraries, so enabling this also needs a rebuilt web image.",
       "additionalProperties": false,
       "properties": {
-        "key": { "type": ["string", "null"] },
-        "url": { "type": "string", "format": "uri" }
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
     "imagePullSecrets": {
@@ -45,19 +64,30 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name"],
-        "properties": { "name": { "type": "string", "minLength": 1 } }
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "commonLabels": {
       "type": "object",
       "description": "Labels merged into every rendered object, alongside each object's own labels. Useful for cost allocation and for selecting this release with kubectl. Not applied to spec.selector.matchLabels, which must stay a strict subset of the pod template labels.",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "commonAnnotations": {
       "type": "object",
       "description": "Annotations merged into every rendered object. Useful for the AWS Load Balancer Controller and for external scrapers.",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "web": {
       "type": "object",
@@ -66,7 +96,11 @@
       "properties": {
         "serviceType": {
           "type": "string",
-          "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ],
           "default": "ClusterIP",
           "description": "Keep ClusterIP on EKS. ingress.yaml provides the public ALB; a LoadBalancer Service here additionally creates an internal NLB that is unreachable from outside the VPC and bills roughly $25/month."
         }
@@ -76,15 +110,24 @@
       "type": "object",
       "description": "Upstream third-party images, not built from this repo. Mirrored into values rather than hardcoded so they can be pointed at a private registry.",
       "additionalProperties": false,
-      "required": ["image"],
+      "required": [
+        "image"
+      ],
       "properties": {
         "image": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["redis", "rabbitmq"],
+          "required": [
+            "redis",
+            "rabbitmq"
+          ],
           "properties": {
-            "redis": { "$ref": "#/definitions/imageRef" },
-            "rabbitmq": { "$ref": "#/definitions/imageRef" }
+            "redis": {
+              "$ref": "#/definitions/imageRef"
+            },
+            "rabbitmq": {
+              "$ref": "#/definitions/imageRef"
+            }
           }
         }
       }
@@ -101,115 +144,240 @@
         }
       }
     },
-    "mysql": { "$ref": "#/definitions/workload" },
-    "shipping": { "$ref": "#/definitions/workload" },
+    "mysql": {
+      "$ref": "#/definitions/workload"
+    },
+    "shipping": {
+      "$ref": "#/definitions/workload"
+    },
     "payment": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "gateway": { "type": ["string", "null"] }
+        "gateway": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "nodeport": {
       "type": "boolean",
       "description": "For minikube and similar. Overrides web.serviceType."
     },
-    "openshift": { "type": "boolean" },
-    "ocCreateRoute": { "type": "boolean" },
-    "cart": { "$ref": "#/definitions/emptyWorkload" },
-    "catalogue": { "$ref": "#/definitions/emptyWorkload" },
-    "dispatch": { "$ref": "#/definitions/emptyWorkload" },
-    "mongodb": { "$ref": "#/definitions/emptyWorkload" },
-    "rabbitmq": { "$ref": "#/definitions/emptyWorkload" },
-    "ratings": { "$ref": "#/definitions/emptyWorkload" },
-    "user": { "$ref": "#/definitions/emptyWorkload" }
+    "openshift": {
+      "type": "boolean"
+    },
+    "ocCreateRoute": {
+      "type": "boolean"
+    },
+    "cart": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "catalogue": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "dispatch": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "mongodb": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "rabbitmq": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "ratings": {
+      "$ref": "#/definitions/emptyWorkload"
+    },
+    "user": {
+      "$ref": "#/definitions/emptyWorkload"
+    }
   },
   "definitions": {
     "imageRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repo", "tag"],
+      "required": [
+        "repo",
+        "tag"
+      ],
       "properties": {
-        "repo": { "type": "string", "minLength": 1 },
-        "tag": { "type": "string", "minLength": 1 }
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "resources": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requests", "limits"],
+      "required": [
+        "requests",
+        "limits"
+      ],
       "properties": {
-        "requests": { "$ref": "#/definitions/resourceQuantities" },
-        "limits": { "$ref": "#/definitions/resourceQuantities" }
+        "requests": {
+          "$ref": "#/definitions/resourceQuantities"
+        },
+        "limits": {
+          "$ref": "#/definitions/resourceQuantities"
+        }
       }
     },
     "resourceQuantities": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["cpu", "memory"],
+      "required": [
+        "cpu",
+        "memory"
+      ],
       "properties": {
-        "cpu": { "type": ["string", "integer"] },
-        "memory": { "type": "string" }
+        "cpu": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "memory": {
+          "type": "string"
+        }
       }
     },
     "workload": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "resources": { "$ref": "#/definitions/resources" },
-        "affinity": { "type": "object" },
-        "nodeSelector": { "type": "object" },
-        "tolerations": { "type": "array" },
-        "probe": { "$ref": "#/definitions/probe" }
-      }
-    },
-    "probe": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "httpGet": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["path", "port"],
-          "properties": {
-            "path": { "type": "string", "minLength": 1 },
-            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-            "scheme": { "type": "string", "enum": ["HTTP", "HTTPS"] }
-          }
+        "resources": {
+          "$ref": "#/definitions/resources"
         },
-        "exec": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["command"],
-          "properties": {
-            "command": { "type": "array", "minItems": 1, "items": { "type": "string" } }
-          }
+        "affinity": {
+          "type": "object"
         },
-        "tcpSocket": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["port"],
-          "properties": {
-            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
-          }
+        "nodeSelector": {
+          "type": "object"
         },
-        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
-        "periodSeconds": { "type": "integer", "minimum": 1 },
-        "timeoutSeconds": { "type": "integer", "minimum": 1 },
-        "failureThreshold": { "type": "integer", "minimum": 1 },
-        "successThreshold": { "type": "integer", "minimum": 1 }
+        "tolerations": {
+          "type": "array"
+        },
+        "readinessProbe": {
+          "$ref": "#/definitions/probeSpec"
+        },
+        "livenessProbe": {
+          "$ref": "#/definitions/probeSpec"
+        }
       }
     },
     "emptyWorkload": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "affinity": { "type": "object" },
-        "nodeSelector": { "type": "object" },
-        "tolerations": { "type": "array" },
-        "probe": { "$ref": "#/definitions/probe" }
+        "affinity": {
+          "type": "object"
+        },
+        "nodeSelector": {
+          "type": "object"
+        },
+        "tolerations": {
+          "type": "array"
+        },
+        "readinessProbe": {
+          "$ref": "#/definitions/probeSpec"
+        },
+        "livenessProbe": {
+          "$ref": "#/definitions/probeSpec"
+        }
       }
+    },
+    "probeSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "httpGet": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "port"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "scheme": {
+              "type": "string",
+              "enum": [
+                "HTTP",
+                "HTTPS"
+              ]
+            }
+          }
+        },
+        "exec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "command"
+          ],
+          "properties": {
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "tcpSocket": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "port"
+          ],
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        },
+        "initialDelaySeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "periodSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "failureThreshold": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "successThreshold": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "A Kubernetes probe spec, passed through to the template verbatim."
     }
   }
 }

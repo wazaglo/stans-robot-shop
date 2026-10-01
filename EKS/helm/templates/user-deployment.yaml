@@ -37,6 +37,10 @@ spec:
                 fieldPath: status.hostIP
         ports:
         - containerPort: 8080
+        {{ with .Values.user.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           limits:
             cpu: 200m

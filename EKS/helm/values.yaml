@@ -44,9 +44,39 @@ ocCreateRoute: false
 #   tolerations: []
 ######################################
 
-cart: {}
+######################################
+# Probes
+#
+# Each readinessProbe below is a Kubernetes probe spec passed through
+# verbatim. The paths were read out of the service source, not guessed:
+#   cart, catalogue, user   -> @app.get('/health')  in server.js
+# Set one to null to disable it.
+#
+# Deliberately no livenessProbe by default. On a memory-constrained node a
+# liveness probe that fails under load triggers restarts, which can turn a
+# slow service into a restart loop and make the situation worse. Add one
+# per workload when you have measured the service under real memory
+# pressure. See docs/probes.md.
+######################################
 
-catalogue: {}
+cart:
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    # Node.js needs a moment to bind before it answers.
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
+
+catalogue:
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
 
 dispatch: {}
 
@@ -84,7 +114,14 @@ shipping:
       cpu: 200m
       memory: 300Mi
 
-user: {}
+user:
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
 
 ######################################
 # Data-tier images
