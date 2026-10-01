@@ -5,6 +5,16 @@ image:
   version: latest
   pullPolicy: IfNotPresent
 
+# Registry credentials, as a list of existing Secret names in the release
+# namespace. Needed for private registries in other accounts, or for any
+# registry that is not the cluster's own ECR -- the EKS node role already
+# grants pull access to same-account ECR via
+# AmazonEC2ContainerRegistryReadOnly, so this stays empty for the setup
+# described in the README.
+imagePullSecrets: []
+# imagePullSecrets:
+#   - name: regcred
+
 # End-user monitoring (Instana). Leave null to disable.
 eum:
   key: null

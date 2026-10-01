@@ -38,6 +38,17 @@
         "url": { "type": "string", "format": "uri" }
       }
     },
+    "imagePullSecrets": {
+      "type": "array",
+      "description": "Names of existing image pull Secrets in the release namespace. Empty by default: the EKS node role already grants pull access to same-account ECR, so the documented setup needs no credentials.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
     "commonLabels": {
       "type": "object",
       "description": "Labels merged into every rendered object, alongside each object's own labels. Useful for cost allocation and for selecting this release with kubectl. Not applied to spec.selector.matchLabels, which must stay a strict subset of the pod template labels.",

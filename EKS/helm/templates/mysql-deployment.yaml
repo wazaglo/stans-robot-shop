@@ -21,6 +21,10 @@ spec:
       labels:
         service: mysql
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: mysql
         image: {{ .Values.image.repo }}/rs-mysql-db:{{ .Values.image.version }}

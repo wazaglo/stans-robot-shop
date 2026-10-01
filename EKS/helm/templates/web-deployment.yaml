@@ -21,6 +21,10 @@ spec:
       labels:
         service: web
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: web
         image: {{ .Values.image.repo }}/rs-web:{{ .Values.image.version }}
