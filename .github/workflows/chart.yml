@@ -45,6 +45,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: install pyyaml
+        run: python -m pip install --quiet pyyaml
+
       - name: helm lint
         run: helm lint EKS/helm
 
@@ -130,36 +133,8 @@ jobs:
       - name: assert documented defaults
         run: |
           set -euo pipefail
-          helm template robot-shop EKS/helm --namespace robot-shop > /tmp/defaults.yaml
-          python - <<'PY'
-          import sys, yaml
-          docs = [d for d in yaml.safe_load_all(open('/tmp/defaults.yaml')) if d]
-          kinds = {}
-          for d in docs:
-              kinds[d['kind']] = kinds.get(d['kind'], 0) + 1
-          print('  kinds:', kinds)
-          assert kinds.get('Deployment') == 11, f"expected 11 Deployments, got {kinds.get('Deployment')}"
-          assert kinds.get('StatefulSet') == 1, f"expected 1 StatefulSet, got {kinds.get('StatefulSet')}"
-          assert kinds.get('Service') == 12, f"expected 12 Services, got {kinds.get('Service')}"
-          # no PodSecurityPolicy: removed in Kubernetes 1.25
-          assert 'PodSecurityPolicy' not in kinds
-
-          ready, live = [], []
-          for d in docs:
-              if d['kind'] == 'Service':
-                  continue
-              c = d['spec']['template']['spec']['containers'][0]
-              if c.get('readinessProbe'):
-                  ready.append(d['metadata']['name'])
-              if c.get('livenessProbe'):
-                  live.append(d['metadata']['name'])
-          expected = sorted(['cart','catalogue','mongodb','mysql','ratings','shipping','user'])
-          assert sorted(ready) == expected, f'readiness probes {sorted(ready)} != {expected}'
-          assert not live, f'liveness must be off by default, found {live}'
-          print('  readiness:', sorted(ready))
-          print('  liveness: none, as documented')
-          PY
-
+          helm template robot-shop EKS/helm --namespace robot-shop \
+            | ./scripts/assert-defaults.py
       - name: web service type defaults to ClusterIP
         run: |
           set -euo pipefail
@@ -187,6 +162,16 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
           # pullbaseimages.sh is upstream and not maintained here
           shellcheck -e SC2046,SC2086,SC1091 scripts/build-push.sh
+
+      - name: python helper scripts
+        run: |
+          python -m pip install --quiet pyyaml
+          # these are the same scripts `make verify` runs, so the two cannot drift
+          chmod +x scripts/assert-defaults.py scripts/check-links.py
+          helm template robot-shop EKS/helm --namespace robot-shop | ./scripts/assert-defaults.py
+          ./scripts/check-links.py
+          python -m py_compile scripts/assert-defaults.py scripts/check-links.py
+          echo "  helper scripts compile and pass"
 
   dockerfiles:
     name: dockerfile sanity
