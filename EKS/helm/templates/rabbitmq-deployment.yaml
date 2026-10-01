@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: rabbitmq
-        image: rabbitmq:3.7-management-alpine
+        image: "{{ .Values.dataTier.image.rabbitmq.repo }}:{{ .Values.dataTier.image.rabbitmq.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: 5672

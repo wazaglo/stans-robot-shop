@@ -75,3 +75,20 @@ shipping:
       memory: 300Mi
 
 user: {}
+
+######################################
+# Data-tier images
+#
+# These two are upstream third-party images, not built from this repo, so
+# they do not use image.repo. They are here rather than hardcoded in the
+# templates so they can still be mirrored into a private registry, which
+# matters for clusters that cannot reach Docker Hub.
+######################################
+dataTier:
+  image:
+    redis:
+      repo: redis
+      tag: "4.0.6"
+    rabbitmq:
+      repo: rabbitmq
+      tag: "3.7-management-alpine"
