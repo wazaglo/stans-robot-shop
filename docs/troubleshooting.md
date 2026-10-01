@@ -270,9 +270,61 @@ kubectl delete node ip-192-168-...    # --ignore-not-found
 **The underlying problem is pod distribution, not node count.** The scheduler
 happily stacks `mysql` (200Mi) and `rabbitmq` (256Mi) together and puts a node
 over the edge. Adding nodes raises the ceiling; it does not stop the stacking.
-The durable fix is `topologySpreadConstraints` or pod anti-affinity in the
-chart so no node is overloaded. On 12 services against nodes with 512Mi each
-there is very little slack for a hot spot.
+On 12 services against nodes with 512Mi each there is very little slack for a
+hot spot.
+
+### The fix, which the chart now supports
+
+The chart used to name this fix without providing it. Both mechanisms are now
+implemented, opt-in, and off by default:
+
+| Value | Effect |
+|---|---|
+| `topologySpreadConstraints` | spreads a workload's replicas across nodes. **Use this one.** |
+| `antiAffinity` | merges into `affinity` as `podAntiAffinity`, refusing to co-locate |
+| `podDisruptionBudgets` | unrelated to memory; see the single-replica warning in `values.yaml` |
+
+For the memory problem, spread constraints are the right tool because they
+*redistribute* rather than *refuse*. With `whenUnsatisfiable: ScheduleAnyway`
+the scheduler still places a pod when the spread cannot be met, so the
+constraint can never wedge a deployment. Using `DoNotSchedule` instead would
+turn a memory problem into pods that never schedule, which on a small node
+count is strictly worse.
+
+Apply it to the three heaviest services:
+
+```yaml
+# values.yaml, or a -f overlay
+mysql:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          service: mysql
+rabbitmq:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          service: rabbitmq
+shipping:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          service: shipping
+```
+
+The real fix, though, is not a scheduling constraint. It is nodes with more
+than 512Mi of allocatable memory, so that a hot spot has somewhere to go.
+These constraints keep the scheduler from concentrating the load; they cannot
+create headroom that does not exist.
 
 ---
 
