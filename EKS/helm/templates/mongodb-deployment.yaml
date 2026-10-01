@@ -35,6 +35,10 @@ spec:
         readinessProbe:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- with .Values.mongodb.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           limits:
             cpu: 200m

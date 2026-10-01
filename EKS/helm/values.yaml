@@ -1,5 +1,3 @@
-# Registry and repository for Docker images
-# Default is docker/robotshop/image:latest
 image:
   repo: robotshop
   version: latest
@@ -52,11 +50,24 @@ ocCreateRoute: false
 #   cart, catalogue, user   -> @app.get('/health')  in server.js
 # Set one to null to disable it.
 #
-# Deliberately no livenessProbe by default. On a memory-constrained node a
-# liveness probe that fails under load triggers restarts, which can turn a
-# slow service into a restart loop and make the situation worse. Add one
-# per workload when you have measured the service under real memory
-# pressure. See docs/probes.md.
+# LIVENESS IS OFF BY DEFAULT, DELIBERATELY.
+#
+# On a node where memory is the binding constraint, a liveness probe that
+# fails under load does not fix the service -- it kills the container and
+# the kubelet starts it again, still out of memory. That converts a slow
+# service into a restart loop and makes the cluster worse, which is
+# exactly what happened during the original build: nodes went NotReady
+# under load and the storefront returned 503.
+#
+# A liveness probe is a statement that the process is wedged and can
+# never recover. That is a claim worth making only with measurements, not
+# by default. When you do add one, keep the window wide: a liveness probe
+# should need roughly a minute of continuous failure before it acts, so
+# a GC pause or a slow dependency does not trigger it. Readiness is the
+# probe that belongs in front of load.
+#
+# Templates support livenessProbe on all seven workloads below. Uncomment
+# the block under a service to enable it. See docs/probes.md.
 ######################################
 
 cart:
@@ -68,6 +79,13 @@ cart:
     initialDelaySeconds: 10
     periodSeconds: 5
     failureThreshold: 3
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   failureThreshold: 6      # ~60s of continuous failure before restart
 
 catalogue:
   readinessProbe:
@@ -77,6 +95,29 @@ catalogue:
     initialDelaySeconds: 10
     periodSeconds: 5
     failureThreshold: 3
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   failureThreshold: 6
+
+user:
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 3
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   failureThreshold: 6
 
 dispatch: {}
 # dispatch deliberately has no probe, and there is no value to uncomment.
@@ -109,6 +150,14 @@ mongodb:
     periodSeconds: 5
     failureThreshold: 12
 
+
+  # livenessProbe:
+  #   exec:
+  #     command: ["mongo", "--quiet", "--eval", "db.adminCommand({ping:1}).ok"]
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   failureThreshold: 6
+
 mysql:
   # mysqld also has no HTTP endpoint. This probe exists for one reason: the
   # image runs its init scripts on first boot and takes around 15s before it
@@ -139,6 +188,14 @@ mysql:
     limits:
       cpu: 200m
       memory: 300Mi
+
+
+  # livenessProbe:
+  #   exec:
+  #     command: ["mysqladmin", "ping", "-h", "127.0.0.1", "-u", "shipping", "-psecret"]
+  #   initialDelaySeconds: 60
+  #   periodSeconds: 15
+  #   failureThreshold: 6
 
 payment:
   # Alternative payment gateway URL
@@ -171,6 +228,15 @@ ratings:
     periodSeconds: 5
     failureThreshold: 30
     successThreshold: 1
+
+
+  # livenessProbe:
+  #   httpGet:
+  #     path: /_health
+  #     port: 80
+  #   initialDelaySeconds: 60
+  #   periodSeconds: 15
+  #   failureThreshold: 8
 
 redis:
   # Storage class to use with redis statefulset.
@@ -205,14 +271,6 @@ shipping:
     failureThreshold: 30
     successThreshold: 1
 
-user:
-  readinessProbe:
-    httpGet:
-      path: /health
-      port: 8080
-    initialDelaySeconds: 10
-    periodSeconds: 5
-    failureThreshold: 3
 
 ######################################
 # Data-tier images
@@ -222,6 +280,15 @@ user:
 # templates so they can still be mirrored into a private registry, which
 # matters for clusters that cannot reach Docker Hub.
 ######################################
+
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: 8080
+  #   initialDelaySeconds: 60
+  #   periodSeconds: 15
+  #   failureThreshold: 8
+
 dataTier:
   image:
     redis:

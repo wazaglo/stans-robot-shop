@@ -42,6 +42,10 @@ spec:
         readinessProbe:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- with .Values.ratings.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       restartPolicy: Always
       {{- with .Values.ratings.affinity }}
       affinity:

@@ -36,8 +36,12 @@ spec:
                 fieldPath: status.hostIP
         ports:
         - containerPort: 8080
-        {{ with .Values.catalogue.readinessProbe }}
+        {{- with .Values.catalogue.readinessProbe }}
         readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.catalogue.livenessProbe }}
+        livenessProbe:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         resources:

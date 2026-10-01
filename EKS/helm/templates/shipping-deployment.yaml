@@ -38,6 +38,10 @@ spec:
         readinessProbe:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- with .Values.shipping.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       restartPolicy: Always
       {{- with .Values.shipping.affinity }}
       affinity:

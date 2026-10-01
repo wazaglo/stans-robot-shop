@@ -39,6 +39,10 @@ spec:
         readinessProbe:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- with .Values.mysql.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           {{- toYaml .Values.mysql.resources | nindent 10 }}
       restartPolicy: Always
