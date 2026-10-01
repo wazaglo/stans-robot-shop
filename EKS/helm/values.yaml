@@ -99,7 +99,18 @@ payment:
 
 rabbitmq: {}
 
-ratings: {}
+ratings:
+  readinessProbe:
+    httpGet:
+      path: /_health
+      port: 80
+    # PHP/Apache. 30 failures at 5s is a generous 150s window, which is what
+    # upstream used -- it matters because this probe also gates on MySQL
+    # being reachable, and MySQL takes a while to run its init scripts.
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
 
 redis:
   # Storage class to use with redis statefulset.
@@ -113,6 +124,17 @@ shipping:
     limits:
       cpu: 200m
       memory: 300Mi
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    # Spring Boot. Generous window for the same reason as ratings: the
+    # service needs MySQL, and a slow first connection should not mark the
+    # pod unready.
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
 
 user:
   readinessProbe:

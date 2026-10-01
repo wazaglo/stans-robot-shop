@@ -38,14 +38,10 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
+        {{- with .Values.ratings.readinessProbe }}
         readinessProbe:
-          httpGet:
-            path: /_health
-            port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 30
-          successThreshold: 1
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       restartPolicy: Always
       {{- with .Values.ratings.affinity }}
       affinity:

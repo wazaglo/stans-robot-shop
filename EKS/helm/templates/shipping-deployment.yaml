@@ -34,14 +34,10 @@ spec:
         # it's Java it needs lots of memory
         resources:
           {{- toYaml .Values.shipping.resources | nindent 10 }}
+        {{- with .Values.shipping.readinessProbe }}
         readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 30
-          successThreshold: 1
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       restartPolicy: Always
       {{- with .Values.shipping.affinity }}
       affinity:
