@@ -275,6 +275,58 @@
         },
         "livenessProbe": {
           "$ref": "#/definitions/probeSpec"
+        },
+        "topologySpreadConstraints": {
+          "type": "array",
+          "description": "Opt-in. Kubernetes topologySpreadConstraints, passed through verbatim. Prevents the scheduler from stacking heavy services onto one node, which is what pushed a node to 99% memory and starved its kubelet. Off by default because it changes scheduling for everyone who upgrades. See docs/troubleshooting.md issue 8.",
+          "default": [],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maxSkew",
+              "topologyKey",
+              "whenUnsatisfiable"
+            ],
+            "properties": {
+              "maxSkew": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "topologyKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "whenUnsatisfiable": {
+                "type": "string",
+                "enum": [
+                  "DoNotSchedule",
+                  "ScheduleAnyway"
+                ]
+              },
+              "minDomains": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "nodeAffinityPolicy": {
+                "type": "string",
+                "enum": [
+                  "Honor",
+                  "Ignore"
+                ]
+              },
+              "nodeTaintsPolicy": {
+                "type": "string",
+                "enum": [
+                  "Honor",
+                  "Ignore"
+                ]
+              },
+              "labelSelector": {
+                "type": "object"
+              }
+            }
+          }
         }
       }
     },
@@ -296,6 +348,58 @@
         },
         "livenessProbe": {
           "$ref": "#/definitions/probeSpec"
+        },
+        "topologySpreadConstraints": {
+          "type": "array",
+          "description": "Opt-in. Kubernetes topologySpreadConstraints, passed through verbatim. Prevents the scheduler from stacking heavy services onto one node, which is what pushed a node to 99% memory and starved its kubelet. Off by default because it changes scheduling for everyone who upgrades. See docs/troubleshooting.md issue 8.",
+          "default": [],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maxSkew",
+              "topologyKey",
+              "whenUnsatisfiable"
+            ],
+            "properties": {
+              "maxSkew": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "topologyKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "whenUnsatisfiable": {
+                "type": "string",
+                "enum": [
+                  "DoNotSchedule",
+                  "ScheduleAnyway"
+                ]
+              },
+              "minDomains": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "nodeAffinityPolicy": {
+                "type": "string",
+                "enum": [
+                  "Honor",
+                  "Ignore"
+                ]
+              },
+              "nodeTaintsPolicy": {
+                "type": "string",
+                "enum": [
+                  "Honor",
+                  "Ignore"
+                ]
+              },
+              "labelSelector": {
+                "type": "object"
+              }
+            }
+          }
         }
       }
     },

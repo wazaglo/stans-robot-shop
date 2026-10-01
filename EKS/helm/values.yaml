@@ -70,6 +70,34 @@ ocCreateRoute: false
 # the block under a service to enable it. See docs/probes.md.
 ######################################
 
+######################################
+# Pod spreading (opt-in, empty by default)
+#
+# This is the fix for the failure described in docs/troubleshooting.md
+# issue 8: the scheduler stacked mysql (200Mi) and rabbitmq (256Mi) onto
+# the same node, that node reached 99% memory, kubelet stopped posting
+# status, and the node went NotReady. Adding more nodes raises the
+# ceiling but does not stop the stacking.
+#
+# Off by default because it changes scheduling for anyone who upgrades.
+# To enable, give a service a list of constraints. The example below is
+# the one that would have prevented the outage, applied to the three
+# heaviest services. Note ScheduleAnyway rather than DoNotSchedule: with
+# ScheduleAnyway the scheduler still places a pod when the spread cannot
+# be satisfied, so this can never wedge a deployment. DoNotSchedule would
+# leave pods Pending, which on a small node count is worse than the
+# problem being solved.
+#
+#   mysql:
+#     topologySpreadConstraints:
+#       - maxSkew: 1
+#         topologyKey: kubernetes.io/hostname
+#         whenUnsatisfiable: ScheduleAnyway
+#         labelSelector:
+#           matchLabels:
+#             service: mysql
+######################################
+
 cart:
   readinessProbe:
     httpGet:
