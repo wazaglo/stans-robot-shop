@@ -80,9 +80,44 @@ catalogue:
 
 dispatch: {}
 
-mongodb: {}
+mongodb:
+  # mongod exposes no HTTP endpoint, so this is an exec probe. The command was
+  # checked against the mongo:5 image this builds from: it exits 0 against a
+  # live server and 1 when nothing is listening, so it is a real signal.
+  readinessProbe:
+    exec:
+      command:
+        - mongo
+        - --quiet
+        - --eval
+        - db.adminCommand({ping:1}).ok
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 12
 
 mysql:
+  # mysqld also has no HTTP endpoint. This probe exists for one reason: the
+  # image runs its init scripts on first boot and takes around 15s before it
+  # accepts connections, so without it dependent services race it and log
+  # connection errors before recovering.
+  #
+  # These credentials must match MYSQL_USER and MYSQL_PASSWORD in
+  # mysql/Dockerfile, which is where they are defined. They are restated here
+  # only so the probe can authenticate. A real deployment should read them
+  # from a Secret and mount it as an env var instead -- see docs/probes.md.
+  readinessProbe:
+    exec:
+      command:
+        - mysqladmin
+        - ping
+        - -h
+        - "127.0.0.1"
+        - -u
+        - shipping
+        - -psecret
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 12
   resources:
     requests:
       cpu: 100m

@@ -31,6 +31,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: 27017
+        {{- with .Values.mongodb.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           limits:
             cpu: 200m

@@ -35,6 +35,10 @@ spec:
             add: ["NET_ADMIN"]
         ports:
         - containerPort: 3306
+        {{- with .Values.mysql.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           {{- toYaml .Values.mysql.resources | nindent 10 }}
       restartPolicy: Always
