@@ -1,0 +1,125 @@
+Stan's Robot Shop
+Copyright 2026 wazaglo
+
+This product includes software developed as part of Stan's Robot Shop.
+
+--------------------------------------------------------------------------------
+Upstream projects
+--------------------------------------------------------------------------------
+
+Stan's Robot Shop
+  https://github.com/instana/robot-shop
+  Copyright the Stan's Robot Shop authors
+  Licensed under the Apache License, Version 2.0
+
+  The application source in this repository -- the twelve service
+  directories, their Dockerfiles, and the upstream docker-compose files --
+  originates here. The microservices, their ports, and the three-tier
+  arrangement (web frontend, business services, data stores) are its
+  design.
+
+  Modified from upstream in this repository. See the history of any
+  service directory for specifics; the substantive changes are:
+
+    dispatch/Dockerfile
+      - exec-form CMD replacing shell form, which had caused the container
+        to exit immediately with "/bin/sh: 1: [dispatch]: not found"
+      - go.mod and go.sum committed, replacing dependency resolution at
+        image build time
+      - runs as an unprivileged user
+
+    shipping/Dockerfile
+      - build stage based on maven:3.8.8-eclipse-temurin-8
+      - JVM heap reduced to match the chart's memory limit
+
+    web/default.conf.template
+      - upstream hostnames resolved at request time via a resolver
+        directive rather than at configuration load
+
+    mysql/Dockerfile
+      - MYSQL_ROOT_PASSWORD set, replacing MYSQL_ALLOW_EMPTY_PASSWORD
+      - entrypoint ordering left intact; no functional change
+
+    All services
+      - .dockerignore added per build context
+
+
+iam-veeramalla/three-tier-architecture-demo
+  https://github.com/iam-veeramalla/three-tier-architecture-demo
+  Copyright the three-tier-architecture-demo authors
+  Licensed under the Apache License, Version 2.0
+
+  A fork of instana/robot-shop adding AWS EKS deployment material. The
+  EKS/ directory structure and the general shape of the setup steps come
+  from here. The documents under EKS/ in this repository were rewritten
+  to describe what was actually done, and the chart under EKS/helm/ was
+  modified substantially -- see the chart's own README and git history.
+
+  Modified from upstream in this repository:
+
+    EKS/helm/templates/web-service.yaml
+      Service type is ClusterIP, configurable via web.serviceType, rather
+      than LoadBalancer. Renders the same by default.
+
+    EKS/helm/templates/podsecuritypolicy.yaml
+    EKS/helm/templates/clusterrole.yaml
+    EKS/helm/templates/clusterrolebinding.yaml
+    EKS/helm/templates/serviceaccount.yaml
+      Deleted. PodSecurityPolicy was removed in Kubernetes 1.25.
+
+    EKS/helm/templates/{mysql,shipping}-deployment.yaml
+      Resource requests are values-driven rather than hardcoded.
+
+    EKS/helm/values.yaml
+      mysql and shipping resources; probes; topologySpreadConstraints;
+      antiAffinity; podDisruptionBudgets; imagePullSecrets; commonLabels;
+      commonAnnotations; dataTier images; web.serviceType
+
+    EKS/helm/values.schema.json
+      Added.
+
+    EKS/helm/templates/poddisruptionbudgets.yaml
+      Added.
+
+    EKS/01-prerequisites.md through EKS/05-ebs-csi-driver.md
+      Rewritten to match the steps actually performed.
+
+    dispatch/docker-compose.yaml
+      Removed. Superseded by the root docker-compose.yaml and referring to
+      a third party's published images.
+
+    docker-compose-load.yaml
+      Removed. Requires a load-gen/ directory that is not part of this
+      repository.
+
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+This repository builds on, but does not redistribute, the following. Each is
+licensed by its own project; none is vendored here.
+
+  MySQL 5.7            https://www.mysql.com/           GPL-2.0
+  MongoDB 5            https://www.mongodb.com/          SSPL-1.0
+  Redis 4.0.6          https://redis.io/                 BSD-3-Clause
+  RabbitMQ 3.7         https://www.rabbitmq.com/         MPL-2.0
+  Nginx 1.21.6         https://nginx.org/                BSD-2-Clause
+  Node.js 14           https://nodejs.org/               MIT
+  Python 3.9           https://python.org/               PSF
+  PHP 7.4              https://www.php.net/              PHP-3.01
+  Go 1.24              https://go.dev/                   BSD-3-Clause
+  Eclipse Temurin 8    https://adoptium.net/             GPL-2.0 with Classpath Exception
+  Apache Maven 3.8.8   https://maven.apache.org/          Apache-2.0
+  Spring Boot          https://spring.io/projects/spring-boot   Apache-2.0
+  Symfony              https://symfony.com/              MIT
+  Instana Go sensor    https://github.com/instana/go-sensor    Apache-2.0
+  OpenTracing Go       https://github.com/opentracing/opentracing-go   Apache-2.0
+  rabbitmq/amqp091-go  https://github.com/rabbitmq/amqp091-go      BSD-2-Clause
+
+The Instana tracing libraries are configured but not bundled: no agent key is
+present in this repository and the tracing modules are not installed in the
+committed images. Enabling end-user monitoring requires supplying a key and
+rebuilding the web image.
+
+For full licence text of the Apache License 2.0, see LICENSE.

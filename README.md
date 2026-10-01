@@ -19,8 +19,20 @@ Apache 2.0, see [`LICENSE`](LICENSE).
 | `EKS/helm/` | the Helm chart that deploys the app |
 | `EKS/01`–`05-*.md` | the EKS setup steps, as they were actually performed |
 | `eksctl/cluster.yaml` | control plane + node group, reproducible from scratch |
-| `scripts/build-push.sh` | builds all 10 images and pushes them to ECR |
+| `Makefile` | `make verify` runs the whole check suite; `make help` lists the rest |
+| `scripts/build-push.sh` | builds and pushes the nine buildable images |
+| `docs/README.md` | index of everything below |
 | `docs/troubleshooting.md` | the nine failures hit while building this, with real error output |
+| `docs/probes.md` | the verified health-endpoint matrix, and why liveness is off |
+| `docs/building.md` | building the images, and why `ratings` cannot be built |
+| `CONTRIBUTING.md` | what CI enforces and why, plus the conventions |
+| `NOTICE`, `SECURITY.md` | upstream attribution; why this is not hardened |
+
+## Before you start
+
+`make verify` runs the full check suite — lint, eleven value combinations
+rendered and parsed, the documented defaults asserted, and the markdown links
+checked. Worth running before and after any chart change.
 
 ---
 
@@ -93,10 +105,15 @@ eksctl utils associate-iam-oidc-provider --cluster wisdom-eks --approve
 ### 3. Build and push images
 
 ```bash
-./scripts/build-push.sh                 # all ten
+./scripts/build-push.sh                 # everything buildable
 ./scripts/build-push.sh cart web        # just two
 TAG=2.1.1 ./scripts/build-push.sh       # different tag
 ```
+
+Nine of the ten build from source. `ratings` cannot, because `php:7.4-apache`
+no longer receives Debian archive updates -- see
+[docs/building.md](docs/building.md), which also has the workaround that was
+actually used, and `make pull` for it.
 
 The script creates each ECR repository if absent, so it is safe to re-run.
 
