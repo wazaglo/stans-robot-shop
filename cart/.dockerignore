@@ -1,0 +1,31 @@
+# cart copies package.json and server.js only
+# Keep the build context to only what the Dockerfile copies. Everything here
+# is either already in the image, generated during the build, or a local
+# artefact that should never be sent to a registry-adjacent build.
+.git
+.gitignore
+.github
+.dockerignore
+Dockerfile
+.dockerignore
+
+# local tooling and editor state
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# dependency trees -- reinstalled inside the image by the build step
+node_modules
+__pycache__
+*.pyc
+target
+vendor
+
+# secrets: never belong in an image layer, and .dockerignore is a cheap
+# second line of defence if one is ever created in this directory
+.env
+*.pem
+*.key
+kubeconfig
+*.kubeconfig
