@@ -1,0 +1,66 @@
+---
+# Creates the control plane, VPC and the managed node group.
+#
+#   eksctl create cluster -f eksctl/cluster.yaml
+#   aws eks update-kubeconfig --name wisdom-eks --region us-east-1
+#
+# Two settings here exist because of failures documented in
+# docs/troubleshooting.md. Do not remove them without reading that file first.
+#
+#   1. instanceType: t3.micro
+#      The AWS account this was built against rejects non-free-tier instance
+#      types outright. eksctl defaults to m5.large, which fails with
+#      "InvalidParameterCombination - The specified instance type is not
+#      eligible for Free Tier", the node group stack rolls back, and you are
+#      left with an ACTIVE control plane and zero nodes.
+#
+#   2. addons.vpc-cni ENABLE_PREFIX_DELEGATION
+#      Without prefix delegation a t3.micro advertises maxPods=4. The cluster
+#      cannot even schedule the EKS system agents, and add-ons sit DEGRADED
+#      with "0/2 nodes are available: 2 Too many pods". With it, maxPods=34.
+#      This must be set at node group creation time -- the kubelet flag is
+#      baked in at first boot, so flipping it later does NOT change existing
+#      nodes and you have to replace the node group.
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: wisdom-eks
+  region: us-east-1
+  version: "1.34"
+
+vpc:
+  cidr: 192.168.0.0/16
+  # 2 AZs -> 2 public + 2 private subnets. Nodes go in the private subnets
+  # so egress is via NAT; only the load balancer lands in the public ones.
+  availabilityZones: [us-east-1c, us-east-1f]
+
+managedNodeGroups:
+  - name: ng-micro-17
+    instanceType: t3.micro
+    amiType: AL2023_x86_64_STANDARD
+    capacityType: ON_DEMAND
+    diskSize: 20
+    privateNetworking: true
+    # Robot Shop requests ~1056Mi in total but kube-system claims ~175Mi on
+    # every node, so a node only has 512Mi to give. 2 is the smallest count
+    # that can hold the app at all. See docs/troubleshooting.md before
+    # raising this: more nodes helps memory headroom but 12 services on
+    # burstable t3 will still evict pods if they stack on one node.
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 7
+    updateConfig:
+      maxUnavailable: 1
+    addons:
+      - name: vpc-cni
+        configurationValues:
+          env:
+            ENABLE_PREFIX_DELEGATION: "true"
+            WARM_PREFIX_TARGET: "1"
+
+# IAM roles for the ALB controller and the EBS CSI driver are deliberately NOT
+# created here. They are Web-identity (IRSA) roles whose trust policy has to
+# embed this cluster's OIDC issuer, which only exists after the control plane
+# exists. Create them afterwards -- see EKS/03-oidc-IAM.md,
+# EKS/04-alb-configuration.md and EKS/05-ebs-csi-driver.md.

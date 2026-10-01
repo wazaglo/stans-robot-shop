@@ -1,0 +1,18 @@
+.*.swp
+.DS_Store
+*-private.*
+vendor/
+Gopkg.lock
+
+# build output
+target/
+node_modules/
+__pycache__/
+*.class
+*.jar
+
+# local kubeconfigs and CLI state -- never commit these
+kubeconfig*
+*.kubeconfig
+.aws/
+eksctl.out
