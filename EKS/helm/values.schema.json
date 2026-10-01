@@ -327,6 +327,19 @@
               }
             }
           }
+        },
+        "antiAffinity": {
+          "type": "object",
+          "description": "Opt-in. Merged into spec.template.spec.affinity as podAntiAffinity, alongside any existing affinity value. Complements topologySpreadConstraints: spread constraints distribute, anti-affinity refuses. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "type": "array"
+            },
+            "preferredDuringSchedulingIgnoredDuringExecution": {
+              "type": "array"
+            }
+          }
         }
       }
     },
@@ -398,6 +411,19 @@
               "labelSelector": {
                 "type": "object"
               }
+            }
+          }
+        },
+        "antiAffinity": {
+          "type": "object",
+          "description": "Opt-in. Merged into spec.template.spec.affinity as podAntiAffinity, alongside any existing affinity value. Complements topologySpreadConstraints: spread constraints distribute, anti-affinity refuses. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "type": "array"
+            },
+            "preferredDuringSchedulingIgnoredDuringExecution": {
+              "type": "array"
             }
           }
         }

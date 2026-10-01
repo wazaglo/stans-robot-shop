@@ -47,9 +47,15 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
       restartPolicy: Always
-      {{- with .Values.shipping.affinity }}
+      {{- if or .Values.shipping.affinity .Values.shipping.antiAffinity }}
       affinity:
+        {{- with .Values.shipping.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.shipping.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.shipping.nodeSelector }}
       nodeSelector:

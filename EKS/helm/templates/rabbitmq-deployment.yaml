@@ -48,9 +48,15 @@ spec:
             cpu: 100m
             memory: 256Mi
       restartPolicy: Always
-      {{- with .Values.rabbitmq.affinity }}
+      {{- if or .Values.rabbitmq.affinity .Values.rabbitmq.antiAffinity }}
       affinity:
+        {{- with .Values.rabbitmq.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.rabbitmq.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.rabbitmq.nodeSelector }}
       nodeSelector:

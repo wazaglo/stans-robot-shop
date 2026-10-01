@@ -56,9 +56,15 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
-      {{- with .Values.cart.affinity }}
+      {{- if or .Values.cart.affinity .Values.cart.antiAffinity }}
       affinity:
+        {{- with .Values.cart.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.cart.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.cart.nodeSelector }}
       nodeSelector:

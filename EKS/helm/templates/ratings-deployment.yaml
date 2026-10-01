@@ -51,9 +51,15 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
       restartPolicy: Always
-      {{- with .Values.ratings.affinity }}
+      {{- if or .Values.ratings.affinity .Values.ratings.antiAffinity }}
       affinity:
+        {{- with .Values.ratings.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.ratings.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.ratings.nodeSelector }}
       nodeSelector:

@@ -51,9 +51,15 @@ spec:
             cpu: 100m
             memory: 100Mi
       restartPolicy: Always
-      {{- with .Values.mongodb.affinity }}
+      {{- if or .Values.mongodb.affinity .Values.mongodb.antiAffinity }}
       affinity:
+        {{- with .Values.mongodb.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.mongodb.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.mongodb.nodeSelector }}
       nodeSelector:

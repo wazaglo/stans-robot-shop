@@ -98,6 +98,33 @@ ocCreateRoute: false
 #             service: mysql
 ######################################
 
+######################################
+# Pod anti-affinity (opt-in, nothing set by default)
+#
+# Merged into spec.template.spec.affinity as podAntiAffinity, so it
+# composes with an existing affinity value rather than replacing it.
+#
+# topologySpreadConstraints and antiAffinity are different tools.
+# Spread constraints redistribute; anti-affinity refuses. Prefer spread
+# constraints for the memory problem in docs/troubleshooting.md issue 8,
+# because they degrade gracefully with ScheduleAnyway. Use anti-affinity
+# when you specifically want a replica not to land near a named service:
+#
+#   mysql:
+#     antiAffinity:
+#       preferredDuringSchedulingIgnoredDuringExecution:
+#         - weight: 100
+#           podAffinityTerm:
+#             topologyKey: kubernetes.io/hostname
+#             labelSelector:
+#               matchLabels:
+#                 service: mysql
+#
+# preferred is the right form here. requiredDuringScheduling
+# would make a second replica unschedulable on a single-node cluster,
+# which is a trap rather than a policy.
+######################################
+
 cart:
   readinessProbe:
     httpGet:

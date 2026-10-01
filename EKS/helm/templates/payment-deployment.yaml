@@ -56,9 +56,15 @@ spec:
             cpu: 100m
             memory: 50Mi
       restartPolicy: Always
-      {{- with .Values.payment.affinity }}
+      {{- if or .Values.payment.affinity .Values.payment.antiAffinity }}
       affinity:
+        {{- with .Values.payment.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.payment.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.payment.nodeSelector }}
       nodeSelector:

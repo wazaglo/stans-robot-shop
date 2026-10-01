@@ -56,9 +56,15 @@ spec:
             cpu: 100m
             memory: 50Mi
       restartPolicy: Always
-      {{- with .Values.catalogue.affinity }}
+      {{- if or .Values.catalogue.affinity .Values.catalogue.antiAffinity }}
       affinity:
+        {{- with .Values.catalogue.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.catalogue.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.catalogue.nodeSelector }}
       nodeSelector:

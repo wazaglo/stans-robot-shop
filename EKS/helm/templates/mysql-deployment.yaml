@@ -50,9 +50,15 @@ spec:
         resources:
           {{- toYaml .Values.mysql.resources | nindent 10 }}
       restartPolicy: Always
-      {{- with .Values.mysql.affinity }}
+      {{- if or .Values.mysql.affinity .Values.mysql.antiAffinity }}
       affinity:
+        {{- with .Values.mysql.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.mysql.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.mysql.nodeSelector }}
       nodeSelector:

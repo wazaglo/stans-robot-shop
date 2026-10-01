@@ -47,9 +47,15 @@ spec:
             cpu: 100m
             memory: 50Mi
       restartPolicy: Always
-      {{- with .Values.dispatch.affinity }}
+      {{- if or .Values.dispatch.affinity .Values.dispatch.antiAffinity }}
       affinity:
+        {{- with .Values.dispatch.affinity }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.dispatch.antiAffinity }}
+        podAntiAffinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.dispatch.nodeSelector }}
       nodeSelector:
