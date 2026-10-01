@@ -126,6 +126,61 @@ curl -s -o /dev/null -w '%{http_code}\n' http://<ALB-DNS-name>/
 
 ---
 
+## Running state
+
+Captured from the live cluster, not written by hand. Regenerate any of these
+with [`docs/capture.py`](docs/capture.py).
+
+**Workloads** -- 11 of 12 ready. `shipping` is the one that does not fit; see
+the capacity section below.
+
+![deployments](docs/screenshots/04-deployments.png)
+
+**Nodes** -- `maxPods=34`, thanks to prefix delegation. Without it these would
+all be `4` and nothing would schedule.
+
+![nodes](docs/screenshots/01-nodes.png)
+
+**The constraint that decides everything.** Each node offers 512Mi of
+allocatable memory, not the 933Mi the instance advertises.
+
+![node capacity](docs/screenshots/02-node-capacity.png)
+
+**Public entry point** -- one ALB, `internet-facing`, `target-type: ip`.
+
+![ingress](docs/screenshots/05-ingress.png)
+
+**`web` is `ClusterIP`.** Upstream renders `LoadBalancer` here, which produces a
+second, internal, externally-unreachable NLB alongside the ALB.
+
+![services](docs/screenshots/06-services.png)
+
+**EBS working** -- Redis's claim is bound to a real volume by the CSI driver.
+
+![pvc](docs/screenshots/07-pvc.png)
+
+**Images** -- all ten built locally and pushed to ECR.
+
+![ecr](docs/screenshots/12-ecr.png)
+
+**One load balancer**, not two.
+
+![load balancers](docs/screenshots/13-loadbalancers.png)
+
+**IRSA trust scoped by `sub`**, not just `aud`.
+
+![irsa](docs/screenshots/14-irsa-trust.png)
+
+**Storefront responding** through the ALB.
+
+![storefront](docs/screenshots/15-storefront.png)
+
+See [`docs/screenshots/README.md`](docs/screenshots/README.md) for the full list
+and for a guide to capturing the Lens and AWS Console views, which are not
+included here.
+
+---
+
 ## Two design decisions worth knowing
 
 **`web` is a `ClusterIP`, not a `LoadBalancer`.** Upstream `web-service.yaml`
