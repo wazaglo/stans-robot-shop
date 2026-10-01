@@ -1,6 +1,26 @@
-apiVersion: v1
+apiVersion: v2
 name: robot-shop
-version: 1.1.0
-home: https://github.com/instana/robot-shop
-description: Sample micoservices application
+description: Stan's Robot Shop - a 12-service microservices storefront
+type: application
 
+# Chart version. Bump on any change to the chart itself.
+version: 1.2.0
+
+# Version of the application these templates deploy. Tracks the image tag
+# used by scripts/build-push.sh (2.1.1), independently of the chart version.
+appVersion: "2.1.1"
+
+home: https://github.com/instana/robot-shop
+sources:
+  - https://github.com/instana/robot-shop
+  - https://github.com/iam-veeramalla/three-tier-architecture-demo
+
+keywords:
+  - microservices
+  - demo
+  - e-commerce
+  - aws
+  - eks
+
+maintainers:
+  - name: wazaglo
