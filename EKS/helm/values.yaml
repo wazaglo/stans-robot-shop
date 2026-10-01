@@ -5,16 +5,17 @@ image:
   version: latest
   pullPolicy: IfNotPresent
 
-# EUM configuration
-# Provide your key and set the endpoint
+# End-user monitoring (Instana). Leave null to disable.
 eum:
   key: null
   url: https://eum-eu-west-1.instana.io
   #url: https://eum-us-west-2.instana.io
 
-# Pod Security Policy
-psp:
-  enabled: false
+# web Service type when nodeport is false.
+# ClusterIP is correct for EKS: ingress.yaml provides the public ALB, and a
+# LoadBalancer Service here would create a second, internal, unreachable NLB.
+web:
+  serviceType: ClusterIP
 
 # For the mini ones minikube, minishift set to true
 nodeport: false
@@ -74,5 +75,3 @@ shipping:
       memory: 300Mi
 
 user: {}
-
-web: {}

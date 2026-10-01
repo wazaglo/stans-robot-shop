@@ -15,9 +15,6 @@ spec:
       labels:
         service: redis
     spec:
-      {{ if .Values.psp.enabled }}
-      serviceAccountName: robot-shop
-      {{ end }}
       containers:
       - name: redis
         image: redis:4.0.6

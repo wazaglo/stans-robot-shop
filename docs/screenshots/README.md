@@ -1,21 +1,19 @@
 # Screenshots
 
-## CLI captures are generated, not hand-made
+## These are historical, not live
 
-Every `NN-*.png` in this directory was rendered from **live cluster output** by
-[`../capture.py`](../capture.py). They are real: the pod names, node names and
-timestamps in them came out of the cluster at the moment they were generated.
+Every `NN-*.png` here was rendered from real cluster output at the time it was
+captured, by a script that has since been removed. The pod names, node names
+and timestamps in them are genuine, but the cluster they came from **has been
+deleted**, along with its ECR repositories and every other resource.
 
-```bash
-./docs/capture.py                # regenerate all
-./docs/capture.py --only nodes   # regenerate one
-```
+They are kept as evidence, not as documentation of a running system. Anything
+below that describes current behaviour should be treated as "this is what
+happened", not "this is what you will get".
 
-Requires `Pillow` and the DejaVu font package. Nothing is hand-edited, so if you
-redeploy, rerun it and the docs show the current state. Note that
-`03-pods.png` will legitimately show churn -- this cluster is on `t3.micro` and
-pods get evicted, so a capture taken during a bad stretch will look bad. That is
-the point; the README does not claim a healthier cluster than exists.
+To capture fresh ones after rebuilding, run the same commands by hand -- the
+generator was a thin wrapper around these, and the table below lists what each
+image shows.
 
 | File | Shows |
 |---|---|
@@ -82,7 +80,7 @@ that a `t3.micro` advertises far more RAM than it can actually give a pod.
 
 The IAM trust policy shot is worth taking deliberately. Compare it against what
 `14-irsa-trust.png` shows: if the console's version is missing the `sub` key,
-that is issue 9 in [`troubleshooting.md`](troubleshooting.md) reproduced in the
+that is issue 9 in [`troubleshooting.md`](../troubleshooting.md) reproduced in the
 UI.
 
 ### The storefront

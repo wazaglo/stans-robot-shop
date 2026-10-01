@@ -128,8 +128,14 @@ curl -s -o /dev/null -w '%{http_code}\n' http://<ALB-DNS-name>/
 
 ## Running state
 
-Captured from the live cluster, not written by hand. Regenerate any of these
-with [`docs/capture.py`](docs/capture.py).
+**These captures are a historical record, taken from the cluster before it was
+deleted.** They are not live output and cannot be regenerated -- the cluster
+and the tooling that produced them are both gone. They are kept because the
+numbers in them are the evidence behind the capacity section below, and because
+several of them show failures that would otherwise be invisible.
+
+If you rebuild the cluster, take fresh captures rather than trusting these:
+pod names, node names and timestamps are from a cluster that no longer exists.
 
 **Workloads** -- 11 of 12 ready. `shipping` is the one that does not fit; see
 the capacity section below.
@@ -181,16 +187,16 @@ included here.
 
 ---
 
-## Two design decisions worth knowing
+## Design decisions worth knowing
 
 **`web` is a `ClusterIP`, not a `LoadBalancer`.** Upstream `web-service.yaml`
 renders `type: LoadBalancer` whenever `nodeport` is false. Combined with
 `ingress.yaml` that produces *two* load balancers in front of the same app: an
 internal NLB (from the Service) and a public ALB (from the Ingress). The chart
-template was changed to `ClusterIP`. The ALB targets pod IPs directly
-(`target-type: ip`), so it does not need a LoadBalancer Service, and this halves
-the load balancer bill. The internal NLB was unreachable from outside the VPC
-anyway, so nothing was lost.
+template now defaults to `ClusterIP`, configurable via `web.serviceType`. The
+ALB targets pod IPs directly (`target-type: ip`), so it does not need a
+LoadBalancer Service, and this halves the load balancer bill. The internal NLB
+was unreachable from outside the VPC anyway, so nothing was lost.
 
 **`mysql` and `shipping` resource requests come from `values.yaml`.** The
 upstream templates hardcode `700Mi` and `500Mi` requests. A `t3.micro` only has
@@ -198,6 +204,12 @@ upstream templates hardcode `700Mi` and `500Mi` requests. A `t3.micro` only has
 are now values-driven, and `shipping`'s JVM flags in its `Dockerfile` were
 matched to its new limit. See
 [`docs/troubleshooting.md`](docs/troubleshooting.md) #3 and #4.
+
+**No `PodSecurityPolicy`.** Upstream ships four PSP templates and a guard in
+every workload template. PSP was removed from Kubernetes in 1.25 and this
+cluster is 1.34, so `policy/v1beta1` could never apply -- they were deleted
+rather than left switched off. `PodSecurityAdmission` is the supported
+replacement and is namespace-scoped, not chart-scoped.
 
 ---
 
@@ -229,19 +241,61 @@ credits deplete the instance is throttled to its ~20% baseline.
 
 ## Teardown
 
+Order matters, and getting it wrong costs an afternoon:
+
 ```bash
-helm uninstall robot-shop -n robot-shop     # keep the cluster
+# 1. Cluster first, while the ALB controller is still installed. If you remove
+#    the controller first, nothing reconciles the Ingress, the ALB is orphaned,
+#    and `eksctl delete cluster` times out waiting for it.
 eksctl delete cluster --name wisdom-eks --region us-east-1
+
+# 2. Node groups the console created. eksctl only tracks node groups it created
+#    itself; a Console-made one is invisible to it and the control plane stack
+#    fails with "Cluster has nodegroups attached (409)".
+eksctl delete nodegroup --name ng-micro-17 --cluster wisdom-eks --drain=false
 ```
 
-Deleting the cluster does not delete the ECR repositories. Remove them
-separately if you want the account clean:
+If `delete cluster` fails on a stuck VPC, the blocker is usually security groups
+left by a load balancer. Delete them, then re-issue the stack delete -- a
+`DELETE_FAILED` stack will not retry on its own:
+
+```bash
+aws ec2 delete-security-group --group-id sg-...
+aws cloudformation delete-stack --stack-name eksctl-<name>-cluster
+```
+
+`--drain=false` skips pod eviction. Use it when pods are already wedged on
+`NotReady` nodes and the whole cluster is going anyway; draining will otherwise
+hang until it times out.
+
+**The cluster delete does not remove ECR repositories** -- they live in the
+account, not the cluster:
 
 ```bash
 for r in cart catalogue dispatch mongodb mysql-db payment ratings shipping user web; do
   aws ecr delete-repository --repository-name robot-shop/rs-$r --region us-east-1 --force
 done
 ```
+
+---
+
+## Running it locally instead
+
+`docker-compose.yaml` and `.env` are intact if you want to iterate without a
+cluster. It builds the same ten service directories and pulls the same public
+`redis` and `rabbitmq` images:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Storefront on <http://localhost:8080>. Images land as `robotshop/rs-<service>:2.1.0`
+from `.env`, not in ECR -- that path is only for local iteration. Use
+`./scripts/build-push.sh` for anything that goes to Kubernetes.
+
+The upstream `docker-compose-load.yaml` has been removed: it needs a `load-gen/`
+directory that is not part of this repo, so it could not run.
 
 ---
 
