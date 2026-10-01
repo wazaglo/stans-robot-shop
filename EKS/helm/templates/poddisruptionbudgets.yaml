@@ -1,0 +1,46 @@
+{{- /*
+PodDisruptionBudgets, opt-in.
+
+Nothing is emitted unless podDisruptionBudgets is set in values.yaml.
+
+READ THIS BEFORE USING ONE. Every workload in this chart runs a single
+replica, so maxUnavailable: 0 combined with minAvailable: 1 makes the pod
+unevictable. That is how a node drain deadlocks: the drain waits for a
+pod that policy says must not move, and the pod cannot be replaced
+because there is no spare capacity elsewhere. With replicas: 1 the safe
+setting is maxUnavailable: 1, which permits the drain and accepts a
+brief outage.
+
+This is not hypothetical. During the build, eksctl refused to drain a
+node because one pod was unevictable, and the cluster delete needed
+--drain=false to get past it.
+
+If you scale a workload above one replica, revisit these values.
+*/ -}}
+{{- range .Values.podDisruptionBudgets }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .workload }}
+  labels:
+    service: {{ .workload }}
+    {{- with $.Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      service: {{ .workload }}
+  {{- if hasKey . "maxUnavailable" }}
+  maxUnavailable: {{ .maxUnavailable }}
+  {{- else if hasKey . "minAvailable" }}
+  minAvailable: {{ .minAvailable }}
+  {{- else }}
+  {{- fail (printf "podDisruptionBudgets entry '%s' needs maxUnavailable or minAvailable" .workload) }}
+  {{- end }}
+{{- end }}

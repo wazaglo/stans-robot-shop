@@ -71,6 +71,31 @@ ocCreateRoute: false
 ######################################
 
 ######################################
+# PodDisruptionBudgets (opt-in, empty by default)
+#
+# Emits nothing unless this list is set.
+#
+# Every workload in this chart runs replicas: 1, which makes the obvious
+# PDB setting a trap. maxUnavailable: 0 with a single replica means the
+# pod can never be evicted, so a node drain waits forever for a pod that
+# policy forbids moving. That is not theoretical: during this build,
+# eksctl refused to drain a node for exactly that reason and the cluster
+# delete needed --drain=false.
+#
+# Use maxUnavailable: 1 until you have actually scaled a workload above
+# one replica:
+#
+#   podDisruptionBudgets:
+#     - workload: web
+#       maxUnavailable: 1
+#     - workload: cart
+#       maxUnavailable: 1
+#
+# minAvailable and maxUnavailable are mutually exclusive; setting both is
+# rejected by the API server, so the chart only emits whichever you give.
+######################################
+
+######################################
 # Pod spreading (opt-in, empty by default)
 #
 # This is the fix for the failure described in docs/troubleshooting.md

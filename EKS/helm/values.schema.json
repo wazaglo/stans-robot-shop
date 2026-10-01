@@ -198,6 +198,39 @@
     },
     "user": {
       "$ref": "#/definitions/emptyWorkload"
+    },
+    "podDisruptionBudgets": {
+      "type": "array",
+      "description": "Opt-in PodDisruptionBudgets, one per entry. Emits nothing by default. Every workload here runs a single replica, so maxUnavailable: 0 would make pods unevictable and deadlock a node drain; use maxUnavailable: 1 until you scale a workload up.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workload"
+        ],
+        "properties": {
+          "workload": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the Deployment to protect. Must match a workload in this chart."
+          },
+          "maxUnavailable": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Use 1 with replicas: 1. 0 makes the pod unevictable."
+          },
+          "minAvailable": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Mutually exclusive with maxUnavailable. Setting both is rejected by the API server."
+          }
+        }
+      }
     }
   },
   "definitions": {
