@@ -38,6 +38,16 @@
         "url": { "type": "string", "format": "uri" }
       }
     },
+    "commonLabels": {
+      "type": "object",
+      "description": "Labels merged into every rendered object, alongside each object's own labels. Useful for cost allocation and for selecting this release with kubectl. Not applied to spec.selector.matchLabels, which must stay a strict subset of the pod template labels.",
+      "additionalProperties": { "type": "string" }
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "description": "Annotations merged into every rendered object. Useful for the AWS Load Balancer Controller and for external scrapers.",
+      "additionalProperties": { "type": "string" }
+    },
     "web": {
       "type": "object",
       "description": "Settings for the frontend Service.",
