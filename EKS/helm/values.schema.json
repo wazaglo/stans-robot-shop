@@ -141,6 +141,12 @@
           "type": "string",
           "minLength": 1,
           "description": "Must resolve to a CSI-backed StorageClass. The in-tree kubernetes.io/aws-ebs provisioner was removed in Kubernetes 1.34."
+        },
+        "readinessProbe": {
+          "$ref": "#/definitions/probeSpec"
+        },
+        "livenessProbe": {
+          "$ref": "#/definitions/probeSpec"
         }
       }
     },

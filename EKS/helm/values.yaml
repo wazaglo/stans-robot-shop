@@ -79,6 +79,20 @@ catalogue:
     failureThreshold: 3
 
 dispatch: {}
+# dispatch deliberately has no probe, and there is no value to uncomment.
+# It is a pure RabbitMQ consumer: main.go has no net.Listen, no
+# ListenAndServe and no HTTP handler, so there is no port to probe. An HTTP
+# or tcpSocket probe against it would fail forever.
+#
+# It also does not need one. The process either holds a channel to RabbitMQ or
+# it has exited, and a container that exits is restarted by the kubelet without
+# any probe. The "is it working" question is answered by RabbitMQ's own probe
+# and by whether dispatch is consuming, not by a synthetic check.
+#
+# Related: dispatch-service.yaml is a headless Service with targetPort: 0,
+# which routes nowhere. It is upstream scaffolding with no consumers in this
+# chart. Left in place rather than deleted, since removing a Service can break
+# a DNS name something else depends on.
 
 mongodb:
   # mongod exposes no HTTP endpoint, so this is an exec probe. The command was
@@ -133,6 +147,17 @@ payment:
   #gateway: https://www.worldpay.com
 
 rabbitmq: {}
+# Opt-in probe for rabbitmq, same reasoning as redis. Verified against
+# rabbitmq:3.7-management-alpine -- prints "Ping succeeded", exit 0.
+# Note the startup cost: the broker needs roughly 10s before it answers.
+# Uncomment and move under rabbitmq: to enable.
+#   readinessProbe:
+#     exec:
+#       command: ["rabbitmq-diagnostics", "-q", "ping"]
+#     initialDelaySeconds: 15
+#     periodSeconds: 10
+#     failureThreshold: 6
+
 
 ratings:
   readinessProbe:
@@ -150,6 +175,15 @@ ratings:
 redis:
   # Storage class to use with redis statefulset.
   storageClassName: gp2
+  # Opt-in. Not enabled by default: redis has no dependents that gate on it,
+  # and an extra exec every 5s is pure overhead on a small node.
+  # Verified against redis:4.0.6 -- prints PONG, exit 0.
+  # readinessProbe:
+  #   exec:
+  #     command: ["redis-cli", "ping"]
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   failureThreshold: 6
 
 shipping:
   resources:

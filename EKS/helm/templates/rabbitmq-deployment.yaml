@@ -32,6 +32,10 @@ spec:
         ports:
         - containerPort: 5672
         - containerPort: 15672
+        {{- with .Values.rabbitmq.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           limits:
             cpu: 200m
