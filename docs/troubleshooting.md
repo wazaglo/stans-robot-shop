@@ -201,16 +201,32 @@ CoreDNS has no ready pod at that instant, nginx cannot start at all. This
 happened while nodes were being replaced and both `coredns` replicas were
 `Terminating`, leaving DNS briefly unavailable.
 
-**Fix.** Not a config change -- delete the pod once DNS is healthy:
+**Fix.** The `web` image in this repo no longer has this problem. The
+upstream hostnames are now passed to `proxy_pass` through variables, with a
+`resolver 127.0.0.11` directive, so nginx resolves them at request time
+instead of while parsing its config. An unresolvable upstream now produces a
+`502` on the affected route and leaves the rest of the site serving, rather
+than preventing the container from starting at all.
+
+Measured, with the same unresolvable hostname in both configs:
+
+| | container | result |
+|---|---|---|
+| hostname directly in `proxy_pass` | exits, code 1 | `nginx: [emerg] host not found in upstream` |
+| hostname via a variable + resolver | stays running | `GET /` 200, `GET /api/catalogue/` 502 |
+
+If you are running an older `rs-web` image, delete the pod once DNS is healthy
+and it will come up:
 
 ```bash
 kubectl get pods -n kube-system -l k8s-app=kube-dns   # confirm 1/1 Running first
 kubectl delete pod -n robot-shop -l service=web
 ```
 
-**Lesson.** Startup-order dependencies are a real class of bug. A `web` pod that
-starts before `catalogue` will never recover on its own because the container
-dies rather than retrying.
+**Lesson.** Startup-order dependencies are a real class of bug. A `web` pod
+that starts before `catalogue` will never recover on its own when the container
+dies at startup rather than retrying. Anything that resolves dependencies
+should do it per request, not at load.
 
 ---
 
