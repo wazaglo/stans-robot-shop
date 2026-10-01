@@ -1,0 +1,220 @@
+name: chart
+
+# Catches the classes of mistake that actually happened while building this
+# chart, rather than a generic "does it lint" check:
+#
+#   - a duplicate top-level key in values.yaml, which YAML resolves silently
+#     by keeping the last occurrence. This shipped once and rendered web
+#     with no spec.type at all.
+#   - a --set value the schema should reject, which otherwise becomes a
+#     manifest that is quietly wrong.
+#   - a template that renders invalid YAML because an insertion landed in
+#     the wrong place. The rabbitmq probe landed between two containerPort
+#     entries and produced unparseable output.
+#   - a probe or a copy pattern that references something the image does
+#     not actually provide.
+#
+# It does not build images. Nine of ten build; ratings cannot, for reasons
+# in docs/building.md, and image builds need ECR credentials that are not
+# available to a pull request.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chart:
+    name: helm lint and render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.22.0
+
+      - name: install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: helm lint
+        run: helm lint EKS/helm
+
+      # A duplicate key in values.yaml is the failure mode that is hardest to
+      # see by eye, because the file still parses and still looks right.
+      # ruamel round-trips the file and reports the collision.
+      - name: check values.yaml for duplicate keys
+        run: |
+          python -m pip install --quiet ruamel.yaml
+          python - <<'PY'
+          import sys
+          from ruamel.yaml import YAML
+          yaml = YAML(typ='safe')
+          for path in ('EKS/helm/values.yaml', 'EKS/helm/Chart.yaml'):
+              with open(path) as fh:
+                  text = fh.read()
+              # strict loader raises on a duplicate mapping key
+              YAML(typ='safe').load(text)
+              print(f'  {path}: no duplicate keys')
+          PY
+
+      - name: values.schema.json is valid json
+        run: python -c "import json;json.load(open('EKS/helm/values.schema.json'));print('  schema parses')"
+
+      # Every combination below must produce parseable YAML. This is the
+      # check that would have caught the rabbitmq probe being spliced into
+      # the middle of a ports list.
+      - name: render matrix
+        run: |
+          set -euo pipefail
+          render() {
+            local name="$1"; shift
+            local out="/tmp/render-${name}.yaml"
+            if ! helm template robot-shop EKS/helm --namespace robot-shop "$@" > "$out" 2>/tmp/err-${name}; then
+              echo "::error::render failed for ${name}"
+              cat /tmp/err-${name}
+              exit 1
+            fi
+            # helm template output must itself be parseable
+            python - "$out" <<'PY'
+          import sys, yaml
+          with open(sys.argv[1]) as fh:
+              docs = [d for d in yaml.safe_load_all(fh) if d]
+          print(f'    {len(docs)} resources')
+          PY
+          }
+          render defaults
+          render ecr            --set image.repo=acct.dkr.ecr.us-east-1.amazonaws.com/robot-shop --set image.version=2.1.1
+          render nodeport       --set nodeport=true
+          render openshift      --set openshift=true --set ocCreateRoute=true
+          render eum            --set eum.key=abc123
+          render lb-servicetype --set web.serviceType=LoadBalancer
+          render pull-secrets   --set imagePullSecrets[0].name=regcred
+          render common-labels  --set commonLabels.env=prod --set commonAnnotations.owner=platform
+          render pdb            --set podDisruptionBudgets[0].workload=web --set podDisruptionBudgets[0].maxUnavailable=1
+          render spread         --set mysql.topologySpreadConstraints[0].maxSkew=1 \
+                                --set mysql.topologySpreadConstraints[0].topologyKey=kubernetes.io/hostname \
+                                --set mysql.topologySpreadConstraints[0].whenUnsatisfiable=ScheduleAnyway
+          render optin-probes   --set redis.readinessProbe.exec.command[0]=redis-cli
+
+      # The schema is only useful if it actually rejects things. Without this,
+      # a schema that silently validates everything would pass CI.
+      - name: schema rejects bad input
+        run: |
+          set -euo pipefail
+          expect_fail() {
+            local desc="$1"; shift
+            if helm template robot-shop EKS/helm --namespace robot-shop "$@" >/dev/null 2>&1; then
+              echo "::error::schema accepted invalid input: ${desc}"
+              exit 1
+            fi
+            echo "  rejected: ${desc}"
+          }
+          expect_fail "misspelled top-level key"    --set msyql.resources.requests.memory=700Mi
+          expect_fail "misspelled nested key"       --set web.serviceTyp=LoadBalancer
+          expect_fail "bad serviceType enum"        --set web.serviceType=Foo
+          expect_fail "non-integer probe port"      --set cart.readinessProbe.httpGet.port=notanumber
+          expect_fail "bad topologySpread value"    --set mysql.topologySpreadConstraints[0].whenUnsatisfiable=Nope
+          expect_fail "unknown key inside a list"   --set podDisruptionBudgets[0].workload=web --set podDisruptionBudgets[0].maxUnavailable=1 --set podDisruptionBudgets[0].bogus=true
+
+      # The defaults are a contract. These are the counts and the probe set
+      # that docs/probes.md and the README both claim.
+      - name: assert documented defaults
+        run: |
+          set -euo pipefail
+          helm template robot-shop EKS/helm --namespace robot-shop > /tmp/defaults.yaml
+          python - <<'PY'
+          import sys, yaml
+          docs = [d for d in yaml.safe_load_all(open('/tmp/defaults.yaml')) if d]
+          kinds = {}
+          for d in docs:
+              kinds[d['kind']] = kinds.get(d['kind'], 0) + 1
+          print('  kinds:', kinds)
+          assert kinds.get('Deployment') == 11, f"expected 11 Deployments, got {kinds.get('Deployment')}"
+          assert kinds.get('StatefulSet') == 1, f"expected 1 StatefulSet, got {kinds.get('StatefulSet')}"
+          assert kinds.get('Service') == 12, f"expected 12 Services, got {kinds.get('Service')}"
+          # no PodSecurityPolicy: removed in Kubernetes 1.25
+          assert 'PodSecurityPolicy' not in kinds
+
+          ready, live = [], []
+          for d in docs:
+              if d['kind'] == 'Service':
+                  continue
+              c = d['spec']['template']['spec']['containers'][0]
+              if c.get('readinessProbe'):
+                  ready.append(d['metadata']['name'])
+              if c.get('livenessProbe'):
+                  live.append(d['metadata']['name'])
+          expected = sorted(['cart','catalogue','mongodb','mysql','ratings','shipping','user'])
+          assert sorted(ready) == expected, f'readiness probes {sorted(ready)} != {expected}'
+          assert not live, f'liveness must be off by default, found {live}'
+          print('  readiness:', sorted(ready))
+          print('  liveness: none, as documented')
+          PY
+
+      - name: web service type defaults to ClusterIP
+        run: |
+          set -euo pipefail
+          helm template robot-shop EKS/helm --namespace robot-shop \
+            | python -c "
+          import sys, yaml
+          for d in yaml.safe_load_all(sys.stdin):
+              if d and d['kind'] == 'Service' and d['metadata']['name'] == 'web':
+                  assert d['spec']['type'] == 'ClusterIP', d['spec']['type']
+                  print('  web Service is ClusterIP')
+          "
+
+  scripts:
+    name: shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash syntax
+        run: |
+          for f in $(find . -name '*.sh' -not -path './.git/*'); do
+            bash -n "$f" && echo "  ok $f"
+          done
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          # pullbaseimages.sh is upstream and not maintained here
+          shellcheck -e SC2046,SC2086,SC1091 scripts/build-push.sh
+
+  dockerfiles:
+    name: dockerfile sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Every Dockerfile should have an exec-form CMD. The dispatch crashloop
+      # in this repo was caused by CMD ['dispatch'] -- shell form -- which
+      # made the container exit with "/bin/sh: 1: [dispatch]: not found".
+      - name: every CMD is exec form
+        run: |
+          set -euo pipefail
+          bad=0
+          for f in $(find . -name Dockerfile -not -path './.git/*'); do
+            if grep -qE "^\s*CMD\s+'" "$f"; then
+              echo "::error::${f} uses single-quoted (shell form) CMD"
+              bad=1
+            fi
+            if grep -qE "^\s*CMD\s+[a-zA-Z]" "$f"; then
+              echo "::error::${f} uses unquoted shell-form CMD"
+              bad=1
+            fi
+          done
+          [ "$bad" -eq 0 ] && echo "  all CMD directives are exec form"
+      - name: every service has a .dockerignore
+        run: |
+          set -euo pipefail
+          for d in cart catalogue dispatch mongo mysql payment ratings shipping user web; do
+            test -f "$d/.dockerignore" || { echo "::error::${d}/.dockerignore missing"; exit 1; }
+          done
+          echo "  all ten contexts have a .dockerignore"
